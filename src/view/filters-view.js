@@ -11,6 +11,10 @@ export default class FiltersView {
           <label for="filter-future">Future</label>
         </div>
         <div class="trip-filters__filter">
+          <input id="filter-present" type="radio" name="trip-filter">
+          <label for="filter-present">Present</label>
+        </div>
+        <div class="trip-filters__filter">
           <input id="filter-past" type="radio" name="trip-filter">
           <label for="filter-past">Past</label>
         </div>

@@ -8,12 +8,19 @@ const RenderPosition = {
 function createElement(template) {
   const newElement = document.createElement('div');
   newElement.innerHTML = template;
-
   return newElement.firstElementChild;
 }
 
 function render(component, container, place = RenderPosition.BEFOREEND) {
-  container.insertAdjacentElement(place, component.getElement());
+  container.insertAdjacentElement(place, component.element);
 }
 
-export {RenderPosition, createElement, render};
+function replace(newComponent, oldComponent) {
+  const parent = oldComponent.element.parentElement;
+  if (parent === null) {
+    throw new Error('Parent element doesn\'t exist');
+  }
+  parent.replaceChild(newComponent.element, oldComponent.element);
+}
+
+export { RenderPosition, createElement, render, replace };

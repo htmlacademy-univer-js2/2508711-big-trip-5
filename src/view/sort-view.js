@@ -1,5 +1,7 @@
-export default class SortView {
-  getTemplate() {
+import AbstractView from '../framework/view/abstract-view.js';
+
+export default class SortView extends AbstractView {
+  get template() {
     return `
       <div class="trip-sort">
         <div class="trip-sort__item">
@@ -13,9 +15,4 @@ export default class SortView {
       </div>
     `;
   }
-
-  render(container) {
-    container.insertAdjacentHTML('beforeend', this.getTemplate());
-  }
 }
-

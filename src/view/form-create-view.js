@@ -1,5 +1,7 @@
-export default class FormCreateView {
-  getTemplate() {
+import AbstractView from '../framework/view/abstract-view.js';
+
+export default class FormCreateView extends AbstractView {
+  get template() {
     return `
       <form class="event event--edit">
         <header class="event__header">
@@ -13,7 +15,6 @@ export default class FormCreateView {
             <div class="event__type-list">
               <fieldset class="event__type-group">
                 <legend class="visually-hidden">Event type</legend>
-                <!-- Типы событий будут здесь -->
               </fieldset>
             </div>
           </div>
@@ -24,7 +25,6 @@ export default class FormCreateView {
             </label>
             <input class="event__input  event__input--destination" id="event-destination-1" type="text" name="event-destination" value="Geneva" list="destination-list-1">
             <datalist id="destination-list-1">
-              <!-- Список городов будет здесь -->
             </datalist>
           </div>
 
@@ -48,13 +48,8 @@ export default class FormCreateView {
           <button class="event__reset-btn" type="reset">Cancel</button>
         </header>
         <section class="event__details">
-          <!-- Детали формы будут здесь -->
         </section>
       </form>
     `;
-  }
-
-  render(container) {
-    container.insertAdjacentHTML('beforeend', this.getTemplate());
   }
 }

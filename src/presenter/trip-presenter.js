@@ -2,12 +2,17 @@ import { render, replace } from '../framework/render.js';
 import PointView from '../view/point-view.js';
 import FormEditView from '../view/form-edit-view.js';
 import Model from '../model/model.js';
+import EmptyListView from '../view/empty-list-view.js';
+import FiltersView from '../view/filters-view.js';
+import SortView from '../view/sort-view.js';
 
 export default class TripPresenter {
   #model = new Model();
   #listContainer = null;
   #pointComponents = new Map();
   #formEditComponents = new Map();
+
+  #currentFilter = 'everything';
 
   init() {
     this.#renderFilters();
@@ -17,9 +22,38 @@ export default class TripPresenter {
   }
 
   #renderFilters() {
+    const filters = [
+      { type: 'everything', name: 'Everything', isDisabled: false, isChecked: this.#currentFilter === 'everything' },
+      { type: 'future', name: 'Future', isDisabled: false, isChecked: this.#currentFilter === 'future' },
+      { type: 'present', name: 'Present', isDisabled: true, isChecked: this.#currentFilter === 'present' },
+      { type: 'past', name: 'Past', isDisabled: false, isChecked: this.#currentFilter === 'past' }
+    ];
+
+    const container = document.querySelector('.trip-controls__filters');
+    const filtersView = new FiltersView(filters);
+    render(filtersView, container);
+
+    filtersView.element.addEventListener('change', (evt) => {
+      if (evt.target.name === 'trip-filter') {
+        this.#filterChangeHandler(evt.target.id.replace('filter-', ''));
+      }
+    });
   }
 
+  #filterChangeHandler = (filterType) => {
+    this.#currentFilter = filterType;
+    this.#clearPoints();
+    this.#renderPoints();
+  };
+
   #renderSort() {
+    const sorts = [
+      { type: 'day', name: 'Day', isChecked: true },
+      { type: 'price', name: 'Price', isChecked: false }
+    ];
+
+    const container = document.querySelector('.trip-events');
+    render(new SortView(sorts), container);
   }
 
   #renderList() {
@@ -30,14 +64,48 @@ export default class TripPresenter {
     this.#listContainer = listElement;
   }
 
-  #renderPoints() {
+  #clearPoints() {
+    this.#pointComponents.forEach((component) => component.element.remove());
+    this.#pointComponents.clear();
+  }
+
+  #getFilteredPoints() {
     const points = this.#model.getPoints();
+
+    switch (this.#currentFilter) {
+      case 'everything':
+        return points;
+      case 'future':
+        return points.filter((point) => new Date(point.date) > new Date());
+      case 'past':
+        return points.filter((point) => new Date(point.date) < new Date());
+      case 'present':
+        return [];
+      default:
+        return points;
+    }
+  }
+
+  #renderPoints() {
+    this.#listContainer.innerHTML = '';
+
+    const points = this.#getFilteredPoints();
     const destinations = this.#model.getDestinations();
     const offers = this.#model.getOffers();
+
+    if (points.length === 0) {
+      this.#renderEmptyList();
+      return;
+    }
 
     points.forEach((point) => {
       this.#renderPoint(point, destinations, offers);
     });
+  }
+
+  #renderEmptyList() {
+    const emptyComponent = new EmptyListView();
+    render(emptyComponent, this.#listContainer);
   }
 
   #renderPoint(point, destinations, offers) {

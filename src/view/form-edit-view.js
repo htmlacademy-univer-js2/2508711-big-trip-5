@@ -1,6 +1,12 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+import dayjs from 'dayjs';
 
 export default class FormEditView extends AbstractStatefulView {
+  #flatpickrStart = null;
+  #flatpickrEnd = null;
+
   constructor(point, destinations, offers, onFormSubmit, onFormClose, onFormDelete) {
     super();
     this._state = FormEditView.parsePointToState(point);
@@ -11,7 +17,6 @@ export default class FormEditView extends AbstractStatefulView {
     this._onFormClose = onFormClose;
     this._onFormDelete = onFormDelete;
 
-    this._setInnerHandlers();
     this._restoreHandlers();
   }
 
@@ -48,6 +53,14 @@ export default class FormEditView extends AbstractStatefulView {
             <datalist id="destination-list-1">
               ${this._destinations.map((dest) => `<option value="${dest.name}"></option>`).join('')}
             </datalist>
+          </div>
+
+          <div class="event__field-group  event__field-group--time">
+            <label class="visually-hidden" for="event-start-time-1">Start time</label>
+            <input class="event__input  event__input--time" id="event-start-time-1" type="text" name="event-start" value="${dayjs(this._state.dateFrom).format('DD/MM/YYYY HH:mm')}">
+            &mdash;
+            <label class="visually-hidden" for="event-end-time-1">End time</label>
+            <input class="event__input  event__input--time" id="event-end-time-1" type="text" name="event-end" value="${dayjs(this._state.dateTo).format('DD/MM/YYYY HH:mm')}">
           </div>
 
           <div class="event__field-group  event__field-group--price">
@@ -97,6 +110,7 @@ export default class FormEditView extends AbstractStatefulView {
 
   _restoreHandlers() {
     this._setInnerHandlers();
+
     this.element.querySelector('.event__rollup-btn')
       .addEventListener('click', this.#formCloseHandler);
     this.element.addEventListener('submit', this.#formSubmitHandler);
@@ -115,6 +129,39 @@ export default class FormEditView extends AbstractStatefulView {
     this.element.querySelectorAll('.event__offer-checkbox').forEach((checkbox) => {
       checkbox.addEventListener('change', this.#offersChangeHandler);
     });
+
+    if (this.#flatpickrStart) {
+      this.#flatpickrStart.destroy();
+      this.#flatpickrStart = null;
+    }
+    if (this.#flatpickrEnd) {
+      this.#flatpickrEnd.destroy();
+      this.#flatpickrEnd = null;
+    }
+
+    this.#flatpickrStart = flatpickr(
+      this.element.querySelector('input[name="event-start"]'),
+      {
+        enableTime: true,
+        dateFormat: 'd/m/Y H:i',
+        defaultDate: this._state.dateFrom,
+        onChange: this.#dateFromChangeHandler,
+        // eslint-disable-next-line camelcase
+        time_24hr: true,
+      }
+    );
+
+    this.#flatpickrEnd = flatpickr(
+      this.element.querySelector('input[name="event-end"]'),
+      {
+        enableTime: true,
+        dateFormat: 'd/m/Y H:i',
+        defaultDate: this._state.dateTo,
+        onChange: this.#dateToChangeHandler,
+        // eslint-disable-next-line camelcase
+        time_24hr: true,
+      }
+    );
   }
 
   #typeChangeHandler = (evt) => {
@@ -148,6 +195,20 @@ export default class FormEditView extends AbstractStatefulView {
     });
   };
 
+  #dateFromChangeHandler = ([selectedDate]) => {
+    this._setState({
+      ...this._state,
+      dateFrom: selectedDate
+    });
+  };
+
+  #dateToChangeHandler = ([selectedDate]) => {
+    this._setState({
+      ...this._state,
+      dateTo: selectedDate
+    });
+  };
+
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
     this._onFormSubmit(FormEditView.parseStateToPoint(this._state));
@@ -164,10 +225,18 @@ export default class FormEditView extends AbstractStatefulView {
   };
 
   static parsePointToState(point) {
-    return { ...point };
+    return {
+      ...point,
+      dateFrom: new Date(point.dateFrom),
+      dateTo: new Date(point.dateTo)
+    };
   }
 
   static parseStateToPoint(state) {
-    return { ...state };
+    return {
+      ...state,
+      dateFrom: state.dateFrom instanceof Date ? state.dateFrom.toISOString() : state.dateFrom,
+      dateTo: state.dateTo instanceof Date ? state.dateTo.toISOString() : state.dateTo
+    };
   }
 }

@@ -15,6 +15,7 @@ export default class TripPresenter {
   #pointPresenters = new Map();
 
   #currentFilter = 'everything';
+  #currentSortType = 'day';
 
   init() {
     this.#renderFilters();
@@ -50,14 +51,23 @@ export default class TripPresenter {
 
   #renderSort() {
     const sorts = [
-      { type: 'day', name: 'Day', isChecked: true },
-      { type: 'price', name: 'Price', isChecked: false }
+      { type: 'day', name: 'Day', isChecked: this.#currentSortType === 'day' },
+      { type: 'price', name: 'Price', isChecked: this.#currentSortType === 'price' }
     ];
 
     const container = document.querySelector('.trip-events');
-    this.#sortComponent = new SortView(sorts);
+    this.#sortComponent = new SortView(sorts, this.#sortTypeChangeHandler);
     render(this.#sortComponent, container);
   }
+
+  #sortTypeChangeHandler = (sortType) => {
+    if (sortType === this.#currentSortType) {
+      return;
+    }
+    this.#currentSortType = sortType;
+    this.#clearPoints();
+    this.#renderPoints();
+  };
 
   #renderList() {
     const container = document.querySelector('.trip-events');
@@ -72,27 +82,37 @@ export default class TripPresenter {
     this.#pointPresenters.clear();
   }
 
-  #getFilteredPoints() {
-    const points = this.#model.getPoints();
+  #getSortedFilteredPoints() {
+    let points = this.#model.getPoints();
 
     switch (this.#currentFilter) {
-      case 'everything':
-        return points;
       case 'future':
-        return points.filter((point) => new Date(point.dateFrom) > new Date());
+        points = points.filter((point) => new Date(point.dateFrom) > new Date());
+        break;
       case 'past':
-        return points.filter((point) => new Date(point.dateFrom) < new Date());
+        points = points.filter((point) => new Date(point.dateFrom) < new Date());
+        break;
       case 'present':
-        return [];
-      default:
-        return points;
+        points = [];
+        break;
     }
+
+    switch (this.#currentSortType) {
+      case 'day':
+        points.sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom));
+        break;
+      case 'price':
+        points.sort((a, b) => b.basePrice - a.basePrice);
+        break;
+    }
+
+    return points;
   }
 
   #renderPoints() {
     this.#listContainer.innerHTML = '';
 
-    const points = this.#getFilteredPoints();
+    const points = this.#getSortedFilteredPoints();
     const destinations = this.#model.getDestinations();
     const offers = this.#model.getOffers();
 

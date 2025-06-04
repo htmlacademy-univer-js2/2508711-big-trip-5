@@ -27,15 +27,15 @@ function getDuration(dateFrom, dateTo) {
 export default class PointView extends AbstractView {
   #point = null;
   #destination = null;
-  #offers = null;
+  #offers = [];
   #handleEditClick = null;
   #handleFavoriteClick = null;
 
-  constructor(point, destinations, offers, onEditClick, onFavoriteClick) {
+  constructor({ point, destinations = [], offers = {}, onEditClick, onFavoriteClick }) {
     super();
     this.#point = point;
-    this.#destination = destinations.find((d) => d.id === point.destination);
-    this.#offers = offers[point.type]?.filter((o) => point.offers.includes(o.id)) || [];
+    this.#destination = destinations.find((d) => d.id === point.destination) || null;
+    this.#offers = offers[point.type]?.filter((o) => point.offers?.includes(o.id)) || [];
     this.#handleEditClick = onEditClick;
     this.#handleFavoriteClick = onFavoriteClick;
 
@@ -44,8 +44,8 @@ export default class PointView extends AbstractView {
   }
 
   get template() {
-    const {basePrice, dateFrom, dateTo, type, isFavorite} = this.#point;
-    const destinationName = this.#destination ? this.#destination.name : '';
+    const { basePrice, dateFrom, dateTo, type, isFavorite } = this.#point;
+    const destinationName = this.#destination?.name || '';
     const offersMarkup = this.#offers.length > 0 ? this.#offers.map((offer) => `
       <li class="event__offer">
         <span class="event__offer-title">${offer.title}</span>
@@ -97,12 +97,6 @@ export default class PointView extends AbstractView {
 
   #favoriteClickHandler = (evt) => {
     evt.preventDefault();
-
-    const updatedPoint = {
-      ...this.#point,
-      isFavorite: !this.#point.isFavorite,
-    };
-
-    this.#handleFavoriteClick(updatedPoint);
+    this.#handleFavoriteClick();
   };
 }

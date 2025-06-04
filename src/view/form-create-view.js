@@ -31,7 +31,8 @@ export default class FormCreateView extends AbstractStatefulView {
       dateTo: new Date(),
       basePrice: 0,
       offers: [],
-      isFavorite: false
+      isFavorite: false,
+      isSaving: false
     };
   }
 
@@ -62,9 +63,7 @@ export default class FormCreateView extends AbstractStatefulView {
           </div>
 
           <div class="event__field-group  event__field-group--destination">
-            <label class="event__label  event__type-output" for="event-destination-1">
-              ${this._state.type}
-            </label>
+            <label class="event__label  event__type-output" for="event-destination-1">${this._state.type}</label>
             <select class="event__input event__input--destination" id="event-destination-1" name="event-destination" required>
               <option value="" disabled ${this._state.destination === '' ? 'selected' : ''}>Select destination</option>
               ${this.#destinations.map((dest) => `
@@ -89,7 +88,9 @@ export default class FormCreateView extends AbstractStatefulView {
             <input class="event__input  event__input--price" id="event-price-1" type="number" name="event-price" min="0" value="${this._state.basePrice}" required>
           </div>
 
-          <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
+          <button class="event__save-btn  btn  btn--blue" type="submit" ${this._state.isSaving ? 'disabled' : ''}>
+            ${this._state.isSaving ? 'Saving...' : 'Save'}
+          </button>
           <button class="event__reset-btn" type="reset">Cancel</button>
         </header>
 
@@ -245,6 +246,13 @@ export default class FormCreateView extends AbstractStatefulView {
     evt.preventDefault();
     this.#handleFormClose();
   };
+
+  shake() {
+    this.element.classList.add('shake');
+    setTimeout(() => {
+      this.element.classList.remove('shake');
+    }, 600);
+  }
 
   removeElement() {
     super.removeElement();

@@ -135,7 +135,6 @@ export default class PointPresenter {
     if (!this.#formEditComponent) {
       return;
     }
-
     if (this.#pointComponent) {
       replace(this.#pointComponent, this.#formEditComponent);
       remove(this.#formEditComponent);
@@ -165,18 +164,25 @@ export default class PointPresenter {
     );
   };
 
-  #handleFormSubmit = (update) => {
-    const isMinorUpdate = !this.#isCreating;
+  #handleFormSubmit = async (update) => {
+    const view = this.#isCreating ? this.#formCreateComponent : this.#formEditComponent;
 
-    this.#onDataChange(
-      this.#isCreating ? UserAction.ADD_POINT : UserAction.UPDATE_POINT,
-      isMinorUpdate ? UpdateType.MINOR : UpdateType.PATCH,
-      update
-    );
+    view.updateElement({ isSaving: true });
 
-    this.destroy();
-    if (this.#isCreating) {
-      this.#onModeChange();
+    try {
+      await this.#onDataChange(
+        this.#isCreating ? UserAction.ADD_POINT : UserAction.UPDATE_POINT,
+        this.#isCreating ? UpdateType.MINOR : UpdateType.PATCH,
+        update
+      );
+
+      this.destroy();
+      if (this.#isCreating) {
+        this.#onModeChange();
+      }
+    } catch {
+      view.updateElement({ isSaving: false });
+      view.shake();
     }
   };
 
@@ -184,11 +190,14 @@ export default class PointPresenter {
     this.resetView();
   };
 
-  #handleFormDelete = (point) => {
-    this.#onDataChange(
-      UserAction.DELETE_POINT,
-      UpdateType.MINOR,
-      point
-    );
+  #handleFormDelete = async (point) => {
+    this.#formEditComponent.updateElement({ isDeleting: true });
+
+    try {
+      await this.#onDataChange(UserAction.DELETE_POINT, UpdateType.MINOR, point);
+    } catch {
+      this.#formEditComponent.updateElement({ isDeleting: false });
+      this.#formEditComponent.shake();
+    }
   };
 }

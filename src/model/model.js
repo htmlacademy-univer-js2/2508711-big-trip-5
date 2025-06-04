@@ -24,8 +24,6 @@ export default class PointsModel extends Observable {
       this.#destinations = destinations;
       this.#offers = this.#formatOffers(offers);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[MODEL INIT ERROR]', err);
       this.#points = [];
       this.#destinations = [];
       this.#offers = {};
@@ -68,23 +66,17 @@ export default class PointsModel extends Observable {
 
       this._notify(updateType, updatedPoint);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[MODEL] updatePoint error:', err);
       throw new Error('Cannot update point');
     }
   }
 
   async addPoint(updateType, update) {
     try {
-      // eslint-disable-next-line no-console
-      console.log('[ADD] Отправляем на сервер:', update);
       const response = await this.#apiService.addPoint(update);
       const newPoint = this.#adaptPointFromServer(response);
       this.#points = [newPoint, ...this.#points];
       this._notify(updateType, newPoint);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[ADD] Ошибка:', err);
       throw new Error('Cannot add point');
     }
   }

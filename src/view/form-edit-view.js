@@ -48,9 +48,7 @@ export default class FormEditView extends AbstractStatefulView {
           </div>
 
           <div class="event__field-group  event__field-group--destination">
-            <label class="event__label  event__type-output" for="event-destination-1">
-              ${this._state.type}
-            </label>
+            <label class="event__label  event__type-output" for="event-destination-1">${this._state.type}</label>
             <select class="event__input event__input--destination" id="event-destination-1" name="event-destination">
               ${this.#destinations.map((dest) => `
                 <option value="${dest.name}" ${dest.id === this._state.destination ? 'selected' : ''}>${dest.name}</option>
@@ -74,8 +72,12 @@ export default class FormEditView extends AbstractStatefulView {
             <input class="event__input  event__input--price" id="event-price-1" type="text" name="event-price" value="${this._state.basePrice}">
           </div>
 
-          <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
-          <button class="event__reset-btn" type="reset">Delete</button>
+          <button class="event__save-btn  btn  btn--blue" type="submit" ${this._state.isSaving ? 'disabled' : ''}>
+            ${this._state.isSaving ? 'Saving...' : 'Save'}
+          </button>
+          <button class="event__reset-btn" type="reset" ${this._state.isDeleting ? 'disabled' : ''}>
+            ${this._state.isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
           <button class="event__rollup-btn" type="button">
             <span class="visually-hidden">Open event</span>
           </button>
@@ -138,12 +140,8 @@ export default class FormEditView extends AbstractStatefulView {
   }
 
   #initDatepickers() {
-    if (this.#flatpickrStart) {
-      this.#flatpickrStart.destroy();
-    }
-    if (this.#flatpickrEnd) {
-      this.#flatpickrEnd.destroy();
-    }
+    this.#flatpickrStart?.destroy();
+    this.#flatpickrEnd?.destroy();
 
     this.#flatpickrStart = flatpickr(
       this.element.querySelector('input[name="event-start"]'),
@@ -180,9 +178,7 @@ export default class FormEditView extends AbstractStatefulView {
   #destinationChangeHandler = (evt) => {
     const destination = this.#destinations.find((dest) => dest.name === evt.target.value);
     if (destination) {
-      this.updateElement({
-        destination: destination.id
-      });
+      this.updateElement({ destination: destination.id });
     }
   };
 
@@ -190,21 +186,15 @@ export default class FormEditView extends AbstractStatefulView {
     const selectedOffers = Array.from(this.element.querySelectorAll('.event__offer-checkbox:checked'))
       .map((input) => input.value);
 
-    this._setState({
-      offers: selectedOffers
-    });
+    this._setState({ offers: selectedOffers });
   };
 
   #dateFromChangeHandler = ([date]) => {
-    this._setState({
-      dateFrom: date
-    });
+    this._setState({ dateFrom: date });
   };
 
   #dateToChangeHandler = ([date]) => {
-    this._setState({
-      dateTo: date
-    });
+    this._setState({ dateTo: date });
   };
 
   #formSubmitHandler = (evt) => {
@@ -228,12 +218,15 @@ export default class FormEditView extends AbstractStatefulView {
       dateFrom: point.dateFrom ? new Date(point.dateFrom) : new Date(),
       dateTo: point.dateTo ? new Date(point.dateTo) : new Date(),
       offers: point.offers || [],
-      destination: point.destination || ''
+      destination: point.destination || '',
+      isSaving: false,
+      isDeleting: false
     };
   }
 
   static parseStateToPoint(state) {
     return {
+      id: state.id,
       basePrice: Number(state.basePrice),
       dateFrom: state.dateFrom.toISOString(),
       dateTo: state.dateTo.toISOString(),
@@ -244,18 +237,16 @@ export default class FormEditView extends AbstractStatefulView {
     };
   }
 
+  shake() {
+    this.element.classList.add('shake');
+    setTimeout(() => {
+      this.element.classList.remove('shake');
+    }, 600);
+  }
 
   removeElement() {
     super.removeElement();
-
-    if (this.#flatpickrStart) {
-      this.#flatpickrStart.destroy();
-      this.#flatpickrStart = null;
-    }
-
-    if (this.#flatpickrEnd) {
-      this.#flatpickrEnd.destroy();
-      this.#flatpickrEnd = null;
-    }
+    this.#flatpickrStart?.destroy();
+    this.#flatpickrEnd?.destroy();
   }
 }

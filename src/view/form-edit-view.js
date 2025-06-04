@@ -6,13 +6,14 @@ import dayjs from 'dayjs';
 export default class FormEditView extends AbstractStatefulView {
   #flatpickrStart = null;
   #flatpickrEnd = null;
+  #destinations = [];
+  #offers = {};
 
-  constructor(point, destinations, offers, onFormSubmit, onFormClose, onFormDelete) {
+  constructor({ point = {}, destinations = [], offers = {}, onFormSubmit, onFormClose, onFormDelete }) {
     super();
+    this.#destinations = destinations;
+    this.#offers = offers;
     this._state = FormEditView.parsePointToState(point);
-    this._destinations = destinations;
-    this._offers = offers;
-
     this._onFormSubmit = onFormSubmit;
     this._onFormClose = onFormClose;
     this._onFormDelete = onFormDelete;
@@ -21,8 +22,8 @@ export default class FormEditView extends AbstractStatefulView {
   }
 
   get template() {
-    const currentDestination = this._destinations.find((d) => d.id === this._state.destination);
-    const currentOffers = this._offers[this._state.type] || [];
+    const currentDestination = this.#destinations.find((d) => d.id === this._state.destination) || {};
+    const currentOffers = this.#offers[this._state.type] || [];
 
     return `
       <form class="event event--edit" action="#" method="post">
@@ -32,10 +33,11 @@ export default class FormEditView extends AbstractStatefulView {
               <span class="visually-hidden">Choose event type</span>
               <img class="event__type-icon" width="17" height="17" src="img/icons/${this._state.type}.png" alt="Event type icon">
             </label>
+            <input class="event__type-toggle  visually-hidden" id="event-type-toggle-1" type="checkbox">
             <div class="event__type-list">
               <fieldset class="event__type-group">
                 <legend class="visually-hidden">Event type</legend>
-                ${Object.keys(this._offers).map((type) => `
+                ${Object.keys(this.#offers).map((type) => `
                   <div class="event__type-item">
                     <input id="event-type-${type}-1" class="event__type-input  visually-hidden" type="radio" name="event-type" value="${type}" ${type === this._state.type ? 'checked' : ''}>
                     <label class="event__type-label  event__type-label--${type}" for="event-type-${type}-1">${type}</label>
@@ -49,10 +51,11 @@ export default class FormEditView extends AbstractStatefulView {
             <label class="event__label  event__type-output" for="event-destination-1">
               ${this._state.type}
             </label>
-            <input class="event__input  event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${currentDestination ? currentDestination.name : ''}" list="destination-list-1">
-            <datalist id="destination-list-1">
-              ${this._destinations.map((dest) => `<option value="${dest.name}"></option>`).join('')}
-            </datalist>
+            <select class="event__input event__input--destination" id="event-destination-1" name="event-destination">
+              ${this.#destinations.map((dest) => `
+                <option value="${dest.name}" ${dest.id === this._state.destination ? 'selected' : ''}>${dest.name}</option>
+              `).join('')}
+            </select>
           </div>
 
           <div class="event__field-group  event__field-group--time">
@@ -84,8 +87,8 @@ export default class FormEditView extends AbstractStatefulView {
             <div class="event__available-offers">
               ${currentOffers.map((offer) => `
                 <div class="event__offer-selector">
-                  <input class="event__offer-checkbox  visually-hidden" id="${offer.id}" type="checkbox" name="event-offer" value="${offer.id}" ${this._state.offers.includes(offer.id) ? 'checked' : ''}>
-                  <label class="event__offer-label" for="${offer.id}">
+                  <input class="event__offer-checkbox  visually-hidden" id="event-offer-${offer.id}" type="checkbox" name="event-offer" value="${offer.id}" ${this._state.offers.includes(offer.id) ? 'checked' : ''}>
+                  <label class="event__offer-label" for="event-offer-${offer.id}">
                     <span class="event__offer-title">${offer.title}</span>
                     &plus;&euro;&nbsp;<span class="event__offer-price">${offer.price}</span>
                   </label>
@@ -96,10 +99,12 @@ export default class FormEditView extends AbstractStatefulView {
 
           <section class="event__section  event__section--destination">
             <h3 class="event__section-title  event__section-title--destination">Destination</h3>
-            <p class="event__destination-description">${currentDestination?.description || ''}</p>
+            <p class="event__destination-description">${currentDestination.description || ''}</p>
             <div class="event__photos-container">
               <div class="event__photos-tape">
-                ${(currentDestination?.pictures || []).map((pic) => `<img class="event__photo" src="${pic.src}" alt="${pic.description}">`).join('')}
+                ${(currentDestination.pictures || []).map((pic) => `
+                  <img class="event__photo" src="${pic.src}" alt="${pic.description}">
+                `).join('')}
               </div>
             </div>
           </section>
@@ -110,12 +115,12 @@ export default class FormEditView extends AbstractStatefulView {
 
   _restoreHandlers() {
     this._setInnerHandlers();
-
-    this.element.querySelector('.event__rollup-btn')
-      .addEventListener('click', this.#formCloseHandler);
+    const rollupBtn = this.element.querySelector('.event__rollup-btn');
+    if (rollupBtn) {
+      rollupBtn.addEventListener('click', this.#formCloseHandler);
+    }
     this.element.addEventListener('submit', this.#formSubmitHandler);
-    this.element.querySelector('.event__reset-btn')
-      .addEventListener('click', this.#formDeleteHandler);
+    this.element.querySelector('.event__reset-btn').addEventListener('click', this.#formDeleteHandler);
   }
 
   _setInnerHandlers() {
@@ -126,17 +131,18 @@ export default class FormEditView extends AbstractStatefulView {
     this.element.querySelector('.event__input--destination')
       .addEventListener('change', this.#destinationChangeHandler);
 
-    this.element.querySelectorAll('.event__offer-checkbox').forEach((checkbox) => {
-      checkbox.addEventListener('change', this.#offersChangeHandler);
-    });
+    this.element.querySelectorAll('.event__offer-checkbox')
+      .forEach((checkbox) => checkbox.addEventListener('change', this.#offersChangeHandler));
 
+    this.#initDatepickers();
+  }
+
+  #initDatepickers() {
     if (this.#flatpickrStart) {
       this.#flatpickrStart.destroy();
-      this.#flatpickrStart = null;
     }
     if (this.#flatpickrEnd) {
       this.#flatpickrEnd.destroy();
-      this.#flatpickrEnd = null;
     }
 
     this.#flatpickrStart = flatpickr(
@@ -165,24 +171,19 @@ export default class FormEditView extends AbstractStatefulView {
   }
 
   #typeChangeHandler = (evt) => {
-    evt.preventDefault();
     this.updateElement({
-      ...this._state,
       type: evt.target.value,
       offers: []
     });
   };
 
   #destinationChangeHandler = (evt) => {
-    const selectedDestination = this._destinations.find((dest) => dest.name === evt.target.value);
-    if (!selectedDestination) {
-      return;
+    const destination = this.#destinations.find((dest) => dest.name === evt.target.value);
+    if (destination) {
+      this.updateElement({
+        destination: destination.id
+      });
     }
-
-    this.updateElement({
-      ...this._state,
-      destination: selectedDestination.id
-    });
   };
 
   #offersChangeHandler = () => {
@@ -190,22 +191,19 @@ export default class FormEditView extends AbstractStatefulView {
       .map((input) => input.value);
 
     this._setState({
-      ...this._state,
       offers: selectedOffers
     });
   };
 
-  #dateFromChangeHandler = ([selectedDate]) => {
+  #dateFromChangeHandler = ([date]) => {
     this._setState({
-      ...this._state,
-      dateFrom: selectedDate
+      dateFrom: date
     });
   };
 
-  #dateToChangeHandler = ([selectedDate]) => {
+  #dateToChangeHandler = ([date]) => {
     this._setState({
-      ...this._state,
-      dateTo: selectedDate
+      dateTo: date
     });
   };
 
@@ -227,16 +225,32 @@ export default class FormEditView extends AbstractStatefulView {
   static parsePointToState(point) {
     return {
       ...point,
-      dateFrom: new Date(point.dateFrom),
-      dateTo: new Date(point.dateTo)
+      dateFrom: point.dateFrom ? new Date(point.dateFrom) : new Date(),
+      dateTo: point.dateTo ? new Date(point.dateTo) : new Date(),
+      offers: point.offers || [],
+      destination: point.destination || ''
     };
   }
 
   static parseStateToPoint(state) {
     return {
       ...state,
-      dateFrom: state.dateFrom instanceof Date ? state.dateFrom.toISOString() : state.dateFrom,
-      dateTo: state.dateTo instanceof Date ? state.dateTo.toISOString() : state.dateTo
+      dateFrom: state.dateFrom.toISOString(),
+      dateTo: state.dateTo.toISOString()
     };
+  }
+
+  removeElement() {
+    super.removeElement();
+
+    if (this.#flatpickrStart) {
+      this.#flatpickrStart.destroy();
+      this.#flatpickrStart = null;
+    }
+
+    if (this.#flatpickrEnd) {
+      this.#flatpickrEnd.destroy();
+      this.#flatpickrEnd = null;
+    }
   }
 }

@@ -219,7 +219,7 @@ export default class FormEditView extends AbstractStatefulView {
 
   #formDeleteHandler = (evt) => {
     evt.preventDefault();
-    this._onFormDelete(FormEditView.parseStateToPoint(this._state));
+    this._onFormDelete(this._state);
   };
 
   static parsePointToState(point) {
@@ -234,11 +234,16 @@ export default class FormEditView extends AbstractStatefulView {
 
   static parseStateToPoint(state) {
     return {
-      ...state,
+      basePrice: Number(state.basePrice),
       dateFrom: state.dateFrom.toISOString(),
-      dateTo: state.dateTo.toISOString()
+      dateTo: state.dateTo.toISOString(),
+      destination: state.destination,
+      offers: state.offers,
+      type: state.type,
+      isFavorite: state.isFavorite ?? false
     };
   }
+
 
   removeElement() {
     super.removeElement();

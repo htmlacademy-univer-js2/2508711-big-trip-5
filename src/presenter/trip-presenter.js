@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import FiltersView from '../view/filters-view.js';
 import SortView from '../view/sort-view.js';
 import EmptyListView from '../view/empty-list-view.js';
+import LoadingView from '../view/loading-view.js';
 import PointPresenter from './point-presenter.js';
 
 export default class TripPresenter {
@@ -14,17 +15,32 @@ export default class TripPresenter {
   #filtersComponent = null;
   #sortComponent = null;
   #emptyListComponent = null;
+  #loadingComponent = new LoadingView();
   #newPointButton = null;
 
   #pointPresenters = new Map();
   #currentSortType = SortType.DAY;
   #isCreating = false;
   #editingPresenter = null;
+  #isLoading = true;
 
   constructor({ model, filterModel, newPointButton }) {
     this.#model = model;
     this.#filterModel = filterModel;
     this.#newPointButton = newPointButton;
+
+    const container = document.querySelector('.trip-events');
+
+    this.#sortComponent = new SortView({
+      currentSortType: this.#currentSortType,
+      onSortTypeChange: this.#handleSortTypeChange
+    });
+    render(this.#sortComponent, container, 'afterbegin');
+
+    const listElement = document.createElement('ul');
+    listElement.classList.add('trip-events__list');
+    container.appendChild(listElement);
+    this.#listContainer = listElement;
 
     this.#model.addObserver(this.#handleModelEvent);
     this.#filterModel.addObserver(this.#handleModelEvent);
@@ -36,9 +52,7 @@ export default class TripPresenter {
 
   init() {
     this.#renderFilters();
-    this.#renderSort();
-    this.#renderList();
-    this.#renderPoints();
+    render(this.#loadingComponent, this.#listContainer);
   }
 
   #renderFilters() {
@@ -51,8 +65,10 @@ export default class TripPresenter {
       onFilterTypeChange: this.#handleFilterTypeChange
     });
 
+    const target = document.querySelector('.trip-controls__filters');
+
     if (prevFiltersComponent === null) {
-      render(this.#filtersComponent, document.querySelector('.trip-controls__filters'));
+      render(this.#filtersComponent, target);
     } else {
       replace(this.#filtersComponent, prevFiltersComponent);
       remove(prevFiltersComponent);
@@ -84,30 +100,6 @@ export default class TripPresenter {
         isDisabled: filter[FilterType.PAST](points).length === 0
       }
     ];
-  }
-
-  #renderSort() {
-    const prevSortComponent = this.#sortComponent;
-
-    this.#sortComponent = new SortView({
-      currentSortType: this.#currentSortType,
-      onSortTypeChange: this.#handleSortTypeChange
-    });
-
-    if (prevSortComponent === null) {
-      render(this.#sortComponent, document.querySelector('.trip-events'));
-    } else {
-      replace(this.#sortComponent, prevSortComponent);
-      remove(prevSortComponent);
-    }
-  }
-
-  #renderList() {
-    const container = document.querySelector('.trip-events');
-    const listElement = document.createElement('ul');
-    listElement.classList.add('trip-events__list');
-    container.appendChild(listElement);
-    this.#listContainer = listElement;
   }
 
   #renderPoints() {
@@ -225,6 +217,8 @@ export default class TripPresenter {
         break;
       case UpdateType.MINOR:
       case UpdateType.MAJOR:
+        this.#isLoading = false;
+        remove(this.#loadingComponent);
         this.#clearPoints();
         this.#renderPoints();
         break;
